@@ -3,31 +3,107 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Buzzi - Login / Signup</title>
-<link rel="stylesheet" href="style.css">
+<title>Chat Room</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  margin: 0; padding: 0;
+  display: flex; flex-direction: column;
+  height: 100vh;
+  background: #2c3e50;
+  color: white;
+}
+header {
+  background: #3498db;
+  padding: 10px;
+  display: flex; align-items: center;
+  justify-content: space-between;
+}
+header img { width: 40px; height: 40px; border-radius: 50%; margin-right: 10px; }
+#chat {
+  flex: 1; padding: 10px;
+  overflow-y: auto;
+  display: flex; flex-direction: column;
+  gap: 10px;
+}
+.message {
+  background: rgba(255,255,255,0.1);
+  padding: 8px 12px;
+  border-radius: 10px;
+  max-width: 60%;
+  word-wrap: break-word;
+}
+form {
+  display: flex; padding: 10px;
+  background: #34495e;
+}
+form input {
+  flex: 1; padding: 10px; border-radius: 5px 0 0 5px; border: none;
+}
+form button {
+  padding: 10px 15px; border: none; background: #f39c12; color: white; font-weight: bold; border-radius: 0 5px 5px 0;
+  cursor: pointer;
+}
+</style>
 </head>
 <body>
-<div class="container">
-  <h2 id="form-title">Login</h2>
-  <input id="username" type="text" placeholder="Username">
-  
-  <div class="input-group">
-    <input id="password" type="password" placeholder="Password">
-    <span id="togglePass" class="toggle-password">Show</span>
+<header>
+  <div style="display:flex; align-items:center;">
+    <img id="pfp" src="" alt="PFP">
+    <span id="usernameHeader"></span>
   </div>
+  <button onclick="logout()">Logout</button>
+</header>
+<div id="chat"></div>
+<form id="chatForm">
+  <input id="messageInput" type="text" placeholder="Type a message..." required>
+  <button type="submit">Send</button>
+</form>
 
-  <div class="input-group" id="confirmPasswordGroup">
-    <input id="confirmPassword" type="password" placeholder="Confirm Password">
-    <span id="toggleConfirmPass" class="toggle-password">Show</span>
-  </div>
+<script>
+const username = localStorage.getItem("username");
+if (!username) {
+  window.location.href = "index.html";
+}
 
-  <button id="submitBtn">Login</button>
-  <span class="toggle-link" onclick="toggleForm()">Don’t have an account? Sign up</span>
-  <div class="message" id="message"></div>
-</div>
+const users = JSON.parse(localStorage.getItem("users"));
+const userData = users[username] || {};
+document.getElementById("usernameHeader").innerText = username;
+document.getElementById("pfp").src = userData.pfp || "https://via.placeholder.com/40";
 
-<div id="loadingScreen">Loading...</div>
+const chat = document.getElementById("chat");
+const chatForm = document.getElementById("chatForm");
+const messageInput = document.getElementById("messageInput");
 
-<script src="app.js"></script>
+let messages = JSON.parse(localStorage.getItem("chatMessages")) || [];
+
+function renderMessages() {
+  chat.innerHTML = "";
+  messages.forEach(msg => {
+    const div = document.createElement("div");
+    div.className = "message";
+    div.innerHTML = `<strong>${msg.username}:</strong> ${msg.text}`;
+    chat.appendChild(div);
+  });
+  chat.scrollTop = chat.scrollHeight;
+}
+
+chatForm.addEventListener("submit", e => {
+  e.preventDefault();
+  const text = messageInput.value.trim();
+  if (!text) return;
+  messages.push({ username, text });
+  localStorage.setItem("chatMessages", JSON.stringify(messages));
+  renderMessages();
+  messageInput.value = "";
+});
+
+function logout() {
+  localStorage.removeItem("username");
+  window.location.href = "index.html";
+}
+
+renderMessages();
+</script>
 </body>
 </html>
