@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dev Chat Room</title>
+<style>
+body { font-family: Arial, sans-serif; margin:0; display:flex; flex-direction:column; height:100vh; background:#2c3e50; color:white; }
+header { background:#e74c3c; padding:10px; display:flex; align-items:center; justify-content:space-between; }
+header img { width:40px; height:40px; border-radius:50%; margin-right:10px; }
+header button { margin-left:5px; padding:5px 10px; border:none; border-radius:5px; cursor:pointer; font-weight:bold; }
+header button:hover { opacity:0.8; }
+#chat { flex:1; padding:10px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; }
+.message { display:flex; align-items:center; gap:10px; background: rgba(255,255,255,0.1); padding:8px 12px; border-radius:10px; max-width:60%; word-wrap:break-word; position: relative; }
+.message img { width:30px; height:30px; border-radius:50%; }
+.delete-btn { margin-left:auto; background:red; color:white; border:none; padding:2px 6px; border-radius:5px; cursor:pointer; }
+form { display:flex; padding:10px; background:#34495e; }
+form input { flex:1; padding:10px; border-radius:5px 0 0 5px; border:none; }
+form button { padding:10px 15px; border:none; background:#f39c12; color:white; font-weight:bold; border-radius:0 5px 5px 0; cursor:pointer; }
+#banForm { display:flex; gap:5px; padding:5px; background:#c0392b; margin-bottom:5px; }
+#banForm input { flex:1; padding:5px; border-radius:5px; border:none; }
+#banForm button { padding:5px 10px; border:none; border-radius:5px; background:#e67e22; cursor:pointer; font-weight:bold; color:white; }
+#resetChat { padding:5px 10px; border:none; border-radius:5px; background:#e74c3c; color:white; font-weight:bold; cursor:pointer; margin-bottom:5px; }
+</style>
+</head>
+<body>
+<header>
+  <div style="display:flex; align-items:center;">
+    <img id="pfp" src="" alt="PFP">
+    <span id="usernameHeader"></span>
+  </div>
+  <div>
+    <button onclick="logout()">Logout</button>
+  </div>
+</header>
+
+<div style="padding:5px; display:flex; flex-direction:column;">
+  <form id="banForm">
+    <input id="banUsername" type="text" placeholder="Username to ban" required>
+    <button type="submit">Ban</button>
+  </form>
+  <button id="resetChat">Reset Chat</button>
+</div>
+
+<div id="chat"></div>
+
+<form id="chatForm">
+  <input id="messageInput" type="text" placeholder="Type a message..." required>
+  <button type="submit">Send</button>
+</form>
+
+<script>
+// Check login
+const username = localStorage.getItem("username");
+if(!username) window.location.href="index.html";
+
+// Load user data
+const users = JSON.parse(localStorage.getItem("users"));
+const userData = users[username] || {};
+document.getElementById("usernameHeader").innerText = username;
+document.getElementById("pfp").src = userData.pfp || "https://via.placeholder.com/40";
+
+// Load messages and banned list
+let messages = JSON.parse(localStorage.getItem("chatMessages")) || [];
+let banned = JSON.parse(localStorage.getItem("bannedUsers")) || [];
+
+// Render messages
+function renderMessages() {
+  const chat = document.getElementById("chat");
+  chat.innerHTML = "";
+  messages.forEach((msg, index) => {
+    const div = document.createElement("div");
+    div.className = "message";
+    div.innerHTML = `<img src="${msg.pfp || 'https://via.placeholder.com/30'}"><strong>${msg.username}:</strong> ${msg.text}`;
+    
+    // Delete button for dev
+    const delBtn = document.createElement("button");
+    delBtn.className = "delete-btn";
+    delBtn.innerText = "Delete";
+    delBtn.onclick = () => { deleteMessage(index); };
+    div.appendChild(delBtn);
+    
+    chat.appendChild(div);
+  });
+  chat.scrollTop = chat.scrollHeight;
+}
+
+// Send message
+const chatForm = document.getElementById("chatForm");
+const messageInput = document.getElementById("messageInput");
+chatForm.addEventListener("submit", e => {
+  e.preventDefault();
+  if(banned.includes(username)) { alert("You are banned!"); return; }
+  const text = messageInput.value.trim();
+  if(!text) return;
+  messages.push({ username, text, pfp: userData.pfp });
+  localStorage.setItem("chatMessages", JSON.stringify(messages));
+  renderMessages();
+  messageInput.value="";
+});
+
+// Delete message
+function deleteMessage(index) {
+  messages.splice(index,1);
+  localStorage.setItem("chatMessages", JSON.stringify(messages));
+  renderMessages();
+}
+
+// Ban user
+const banForm = document.getElementById("banForm");
+banForm.addEventListener("submit", e => {
+  e.preventDefault();
+  const banUser = document.getElementById("banUsername").value.trim();
+  if(!banUser) return;
+  if(!banned.includes(banUser)) {
+    banned.push(banUser);
+    localStorage.setItem("bannedUsers", JSON.stringify(banned));
+    alert(`${banUser} has been banned.`);
+  } else {
+    alert(`${banUser} is already banned.`);
+  }
+  document.getElementById("banUsername").value="";
+});
+
+// Reset chat
+document.getElementById("resetChat").addEventListener("click", () => {
+  if(confirm("Are you sure you want to reset all chat messages?")) {
+    messages = [];
+    localStorage.setItem("chatMessages", JSON.stringify(messages));
+    renderMessages();
+  }
+});
+
+// Logout
+function logout(){
+  localStorage.removeItem("username");
+  window.location.href="index.html";
+}
+
+renderMessages();
+</script>
+</body>
+</html>
