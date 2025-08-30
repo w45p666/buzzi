@@ -1,284 +1,105 @@
-import React, { useState, useEffect } from 'react';
-// Single-file React component for a modern social media site mockup
-// Tailwind CSS utility classes assumed available in the project.
-// Uses shadcn/ui & lucide-react style imports as placeholders (these are available per workspace).
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Social Media Demo</title>
+<style>
+    body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 0; }
+    .profile { padding: 20px; background: #fff; display: flex; align-items: center; gap: 20px; }
+    .profile img { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; }
+    .profile-info { flex-grow: 1; }
+    .profile-info h2 { margin: 0; }
+    .profile-info p { margin: 5px 0; color: #555; }
+    .counts { display: flex; gap: 15px; color: #777; font-size: 14px; }
+    .new-post { padding: 20px; background: #fff; margin-top: 10px; }
+    .new-post textarea { width: 100%; padding: 10px; font-size: 14px; }
+    .feed { margin-top: 10px; }
+    .post { background: #fff; padding: 15px; margin: 10px 0; border-radius: 5px; }
+    .post h3 { margin: 0 0 5px 0; }
+    .post p { margin: 5px 0; }
+    .post .actions { display: flex; gap: 10px; color: #555; font-size: 14px; cursor: pointer; }
+</style>
+</head>
+<body>
 
-import { Search } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-
-// This is a single-file demo app for "Buzzi". Default export is the React component preview.
-
-const samplePosts = [
-  {
-    id: 'p1',
-    author: { name: 'Riley', handle: '@riley', avatar: '' },
-    content: 'Just launched a tiny side project — feedback welcome! #indiehackers',
-    likes: 12,
-    comments: [
-      { id: 'c1', author: 'Ava', text: 'Love this — link?' },
-      { id: 'c2', author: 'Noah', text: 'Congrats!' },
-    ],
-    createdAt: Date.now() - 1000 * 60 * 60,
-  },
-  {
-    id: 'p2',
-    author: { name: 'Sam', handle: '@sam', avatar: '' },
-    content: "Does anyone have a great productivity playlist? I'm building one for focus.",
-    likes: 5,
-    comments: [],
-    createdAt: Date.now() - 1000 * 60 * 60 * 6,
-  },
-];
-
-function timeAgo(ts) {
-  const s = Math.floor((Date.now() - ts) / 1000);
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h`;
-  const d = Math.floor(h / 24);
-  return `${d}d`;
-}
-
-export default function BuzziApp() {
-  const [posts, setPosts] = useState(() => {
-    const saved = localStorage.getItem('buzzi_posts');
-    return saved ? JSON.parse(saved) : samplePosts;
-  });
-  const [query, setQuery] = useState('');
-  const [composer, setComposer] = useState('');
-  const [filter, setFilter] = useState('home');
-  const [user] = useState({ name: 'You', handle: '@you' });
-  const [notifications, setNotifications] = useState([]);
-
-  useEffect(() => {
-    localStorage.setItem('buzzi_posts', JSON.stringify(posts));
-  }, [posts]);
-
-  useEffect(() => {
-    // small demo: if someone mentions #indiehackers in a new post, add a notification
-    const recentMention = posts.find((p) => p.content.includes('#indiehackers'));
-    if (recentMention) {
-      setNotifications((n) => [
-        { id: `n_${Date.now()}`, text: `Post about #indiehackers by ${recentMention.author.name}` },
-        ...n,
-      ]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  function createPost() {
-    if (!composer.trim()) return;
-    const newPost = {
-      id: `p_${Date.now()}`,
-      author: { name: user.name, handle: user.handle, avatar: '' },
-      content: composer.trim(),
-      likes: 0,
-      comments: [],
-      createdAt: Date.now(),
-    };
-    setPosts((p) => [newPost, ...p]);
-    setComposer('');
-  }
-
-  function toggleLike(id) {
-    setPosts((ps) => ps.map((p) => (p.id === id ? { ...p, likes: p.likes + 1 } : p)));
-  }
-
-  const filteredPosts = posts.filter((p) => p.content.toLowerCase().includes(query.toLowerCase()));
-
-  return (
-    <div className="min-h-screen bg-surface-1 text-foreground flex flex-col">
-      <header className="sticky top-0 z-20 bg-white/60 backdrop-blur-md border-b border-slate-200">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="text-2xl font-extrabold text-rose-500">Buzzi</div>
-            <nav className="hidden sm:flex gap-2 text-sm text-slate-600">
-              <button onClick={() => setFilter('home')} className={`px-2 py-1 rounded ${filter==='home' ? 'bg-rose-50' : 'hover:bg-slate-100'}`}>Home</button>
-              <button onClick={() => setFilter('explore')} className={`px-2 py-1 rounded ${filter==='explore' ? 'bg-rose-50' : 'hover:bg-slate-100'}`}>Explore</button>
-              <button onClick={() => setFilter('notifications')} className={`px-2 py-1 rounded ${filter==='notifications' ? 'bg-rose-50' : 'hover:bg-slate-100'}`}>Notifications</button>
-            </nav>
-          </div>
-
-          <div className="flex-1 max-w-xl mx-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 opacity-60" size={16} />
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search Buzzi" className="w-full pl-9 pr-3 py-2 rounded-md border border-slate-200" />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button className="hidden sm:inline-flex items-center gap-2 px-3 py-1 rounded-md border border-slate-200">Create</button>
-            <div className="relative">
-              <button onClick={() => setFilter('notifications')} className="p-2 rounded-full hover:bg-slate-100">
-                🔔
-                {notifications.length > 0 && (
-                  <span className="absolute -top-1 -right-1 text-xs bg-red-500 text-white rounded-full px-1">{notifications.length}</span>
-                )}
-              </button>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-slate-300 flex items-center justify-center">{user.name[0]}</div>
-          </div>
+<!-- Profile (Identity) -->
+<div class="profile">
+    <img id="profilePic" src="https://via.placeholder.com/80" alt="Profile Picture">
+    <div class="profile-info">
+        <h2 id="username">Username</h2>
+        <p id="bio">This is a bio about the user.</p>
+        <div class="counts">
+            <span id="followers">Followers: 120</span>
+            <span id="following">Following: 75</span>
         </div>
-      </header>
-
-      <main className="flex-1 max-w-6xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left - profile / compose */}
-        <aside className="hidden lg:block">
-          <Card>
-            <CardContent>
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-full bg-slate-300 flex items-center justify-center">{user.name[0]}</div>
-                <div>
-                  <div className="font-semibold">{user.name}</div>
-                  <div className="text-sm text-slate-500">{user.handle}</div>
-                </div>
-              </div>
-              <div className="mt-4">
-                <Button onClick={() => alert('Edit profile (demo)')}>Edit profile</Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="mt-4">
-            <CardContent>
-              <h3 className="text-sm font-semibold mb-2">Trends for you</h3>
-              <ul className="space-y-2 text-sm text-slate-700">
-                <li className="flex items-center justify-between">
-                  <span>#indiehackers</span>
-                  <span className="text-xs text-slate-400">12.3k</span>
-                </li>
-                <li className="flex items-center justify-between">
-                  <span>#webdev</span>
-                  <span className="text-xs text-slate-400">8.9k</span>
-                </li>
-                <li className="flex items-center justify-between">
-                  <span>#productivity</span>
-                  <span className="text-xs text-slate-400">4.2k</span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
-        </aside>
-
-        {/* Middle - feed */}
-        <section className="lg:col-span-2">
-          <div className="mb-4">
-            <Card>
-              <CardContent>
-                <div className="flex gap-3">
-                  <div className="w-12 h-12 rounded-full bg-slate-300 flex items-center justify-center">{user.name[0]}</div>
-                  <div className="flex-1">
-                    <textarea value={composer} onChange={(e) => setComposer(e.target.value)} placeholder={`What's buzzing, ${user.name}?`} className="w-full resize-none min-h-[70px] p-3 border border-slate-200 rounded-md"></textarea>
-                    <div className="flex items-center justify-between mt-2">
-                      <div className="text-xs text-slate-500">Tip: use #hashtags to help people find your post</div>
-                      <div className="flex items-center gap-2">
-                        <Button onClick={createPost}>Post</Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="space-y-4">
-            {filter === 'notifications' ? (
-              <Card>
-                <CardContent>
-                  <h3 className="font-semibold">Notifications</h3>
-                  <ul className="mt-3 space-y-2">
-                    {notifications.length === 0 && <li className="text-sm text-slate-500">No notifications</li>}
-                    {notifications.map((n) => (
-                      <li key={n.id} className="text-sm">{n.text}</li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            ) : (
-              filteredPosts.map((p) => (
-                <article key={p.id} className="bg-white border border-slate-200 rounded-md p-4">
-                  <div className="flex gap-3">
-                    <div className="w-12 h-12 rounded-full bg-slate-300 flex items-center justify-center">{p.author.name[0]}</div>
-                    <div className="flex-1">
-                      <header className="flex items-center justify-between">
-                        <div>
-                          <div className="font-semibold">{p.author.name} <span className="text-sm text-slate-400 ml-2">{p.author.handle}</span></div>
-                          <div className="text-xs text-slate-400">{timeAgo(p.createdAt)} ago</div>
-                        </div>
-                        <div className="text-sm text-slate-400">...</div>
-                      </header>
-
-                      <div className="mt-2 text-slate-800">{p.content}</div>
-
-                      <footer className="flex items-center gap-4 mt-3 text-sm text-slate-600">
-                        <button onClick={() => toggleLike(p.id)} className="flex items-center gap-2 hover:text-rose-500">❤️ {p.likes}</button>
-                        <button onClick={() => {
-                          const comment = prompt('Add comment (demo)');
-                          if (comment) {
-                            setPosts((ps) => ps.map((q) => q.id === p.id ? { ...q, comments: [...q.comments, { id:`c${Date.now()}`, author: user.name, text: comment }] } : q));
-                          }
-                        }} className="flex items-center gap-2">💬 {p.comments.length}</button>
-                        <button onClick={() => {navigator.share ? navigator.share({ text: p.content }) : alert('Share (demo)');}} className="flex items-center gap-2">🔗 Share</button>
-                      </footer>
-
-                      {p.comments.length > 0 && (
-                        <div className="mt-3 border-l-2 border-slate-100 pl-3">
-                          {p.comments.map((c) => (
-                            <div key={c.id} className="text-sm text-slate-700 py-1"> <span className="font-semibold">{c.author}:</span> {c.text}</div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </article>
-              ))
-            )}
-          </div>
-        </section>
-
-        {/* Right - explore / suggestions */}
-        <aside className="hidden lg:block">
-          <Card>
-            <CardContent>
-              <h3 className="font-semibold">Who to follow</h3>
-              <ul className="mt-3 space-y-3">
-                {['Ava', 'Maya', 'Leo'].map((name) => (
-                  <li key={name} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-slate-300 flex items-center justify-center">{name[0]}</div>
-                      <div>
-                        <div className="font-medium">{name}</div>
-                        <div className="text-xs text-slate-400">@{name.toLowerCase()}</div>
-                      </div>
-                    </div>
-                    <Button onClick={() => alert(`Followed ${name} (demo)`)}>Follow</Button>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card className="mt-4">
-            <CardContent>
-              <h3 className="font-semibold">Explore</h3>
-              <div className="mt-2 text-sm text-slate-600">Trending hashtags and topics. Click to filter the feed.</div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {['#webdev', '#indiehackers', '#design'].map((t) => (
-                  <button key={t} onClick={() => setQuery(t.replace('#',''))} className="text-xs px-2 py-1 rounded-md border border-slate-200">{t}</button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </aside>
-      </main>
-
-      <footer className="py-6 text-center text-sm text-slate-500">
-        Built with ❤️ — Buzzi prototype
-      </footer>
     </div>
-  );
+</div>
+
+<!-- Content (Expression) -->
+<div class="new-post">
+    <textarea id="postContent" placeholder="What's on your mind?"></textarea>
+    <button onclick="createPost()">Post</button>
+</div>
+
+<!-- Feed (Discovery) -->
+<div class="feed" id="feed">
+    <!-- Posts will appear here -->
+</div>
+
+<script>
+// Simple in-memory storage for posts
+let posts = [];
+
+// Interaction & Posting
+function createPost() {
+    const content = document.getElementById('postContent').value.trim();
+    if (!content) return alert('Post cannot be empty');
+
+    const post = {
+        username: document.getElementById('username').textContent,
+        content,
+        likes: 0,
+        comments: [],
+        shares: 0
+    };
+
+    posts.unshift(post);
+    document.getElementById('postContent').value = '';
+    renderFeed();
 }
+
+function renderFeed() {
+    const feed = document.getElementById('feed');
+    feed.innerHTML = '';
+    posts.forEach((post, index) => {
+        const postDiv = document.createElement('div');
+        postDiv.className = 'post';
+        postDiv.innerHTML = `
+            <h3>${post.username}</h3>
+            <p>${post.content}</p>
+            <div class="actions">
+                <span onclick="likePost(${index})">❤️ ${post.likes}</span>
+                <span onclick="sharePost(${index})">🔁 ${post.shares}</span>
+            </div>
+        `;
+        feed.appendChild(postDiv);
+    });
+}
+
+function likePost(index) {
+    posts[index].likes++;
+    renderFeed();
+}
+
+function sharePost(index) {
+    posts[index].shares++;
+    renderFeed();
+}
+
+// Initialize feed
+renderFeed();
+</script>
+
+</body>
+</html>
