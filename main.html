@@ -3,24 +3,75 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Buzzi - Feed</title>
-<link rel="stylesheet" href="style.css">
+<title>Chat Room</title>
+<style>
+body { font-family: Arial, sans-serif; margin:0; display:flex; flex-direction:column; height:100vh; background:#2c3e50; color:white; }
+header { background:#3498db; padding:10px; display:flex; align-items:center; justify-content:space-between; }
+header img { width:40px; height:40px; border-radius:50%; margin-right:10px; }
+#chat { flex:1; padding:10px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; }
+.message { display:flex; align-items:center; gap:10px; background: rgba(255,255,255,0.1); padding:8px 12px; border-radius:10px; max-width:60%; word-wrap:break-word; }
+.message img { width:30px; height:30px; border-radius:50%; }
+form { display:flex; padding:10px; background:#34495e; }
+form input { flex:1; padding:10px; border-radius:5px 0 0 5px; border:none; }
+form button { padding:10px 15px; border:none; background:#f39c12; color:white; font-weight:bold; border-radius:0 5px 5px 0; cursor:pointer; }
+</style>
 </head>
 <body>
-<div class="container">
-  <h2>Welcome, <span id="currentUser"></span></h2>
-
-  <div class="post-form">
-    <textarea id="postContent" placeholder="What's on your mind?"></textarea>
-    <button id="postBtn">Post</button>
+<header>
+  <div style="display:flex; align-items:center;">
+    <img id="pfp" src="" alt="PFP">
+    <span id="usernameHeader"></span>
   </div>
+  <button onclick="logout()">Logout</button>
+</header>
+<div id="chat"></div>
+<form id="chatForm">
+  <input id="messageInput" type="text" placeholder="Type a message..." required>
+  <button type="submit">Send</button>
+</form>
 
-  <h3>Feed</h3>
-  <div id="feed"></div>
+<script>
+const username = localStorage.getItem("username");
+if(!username) window.location.href="index.html";
 
-  <button id="logoutBtn" style="margin-top: 20px; background:#ff4c4c;">Logout</button>
-</div>
+const users = JSON.parse(localStorage.getItem("users"));
+const userData = users[username] || {};
+document.getElementById("usernameHeader").innerText = username;
+document.getElementById("pfp").src = userData.pfp || "https://via.placeholder.com/40";
 
-<script src="main.js"></script>
+const chat = document.getElementById("chat");
+const chatForm = document.getElementById("chatForm");
+const messageInput = document.getElementById("messageInput");
+
+let messages = JSON.parse(localStorage.getItem("chatMessages")) || [];
+
+function renderMessages() {
+  chat.innerHTML = "";
+  messages.forEach(msg => {
+    const div = document.createElement("div");
+    div.className = "message";
+    div.innerHTML = `<img src="${msg.pfp || 'https://via.placeholder.com/30'}"><strong>${msg.username}:</strong> ${msg.text}`;
+    chat.appendChild(div);
+  });
+  chat.scrollTop = chat.scrollHeight;
+}
+
+chatForm.addEventListener("submit", e=>{
+  e.preventDefault();
+  const text = messageInput.value.trim();
+  if(!text) return;
+  messages.push({ username, text, pfp: userData.pfp });
+  localStorage.setItem("chatMessages", JSON.stringify(messages));
+  renderMessages();
+  messageInput.value="";
+});
+
+function logout(){
+  localStorage.removeItem("username");
+  window.location.href="index.html";
+}
+
+renderMessages();
+</script>
 </body>
 </html>
