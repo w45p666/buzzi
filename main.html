@@ -1,3 +1,88 @@
-<script
-  src='https://cdn.jotfor.ms/agent/embedjs/0198fb3b02d67922b0d70ca18a27e013598d/embed.js?skipWelcome=1&maximizable=1'>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rock Paper Scissors</title>
+<style>
+body {font-family: Arial, sans-serif; background: #2c3e50; color: white; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh;}
+h1 {margin-bottom: 10px;}
+#stats {margin: 15px 0; font-size: 18px;}
+button {padding: 10px 20px; margin: 5px; font-size: 18px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;}
+button:hover {opacity: 0.8;}
+#result {margin-top: 20px; font-size: 20px;}
+</style>
+</head>
+<body>
+  <h1>Rock Paper Scissors</h1>
+  <h2 id="username"></h2>
+  <div id="stats">Wins: 0 | Losses: 0 | Ties: 0</div>
+
+  <div>
+    <button onclick="play('rock')">✊ Rock</button>
+    <button onclick="play('paper')">✋ Paper</button>
+    <button onclick="play('scissors')">✌ Scissors</button>
+  </div>
+
+  <div id="result"></div>
+  <button onclick="logout()">Logout</button>
+
+<script>
+let username = localStorage.getItem("username");
+if(!username) window.location.href = "index.html"; // redirect if not logged in
+
+let users = JSON.parse(localStorage.getItem("users")) || {};
+let userData = users[username] || {};
+
+// Ensure stats exist
+if(!userData.stats){
+  userData.stats = {wins: 0, losses: 0, ties: 0};
+}
+
+// Display username
+document.getElementById("username").innerText = "Logged in as: " + username;
+
+// Update stats UI
+function updateStats(){
+  document.getElementById("stats").innerText = 
+    `Wins: ${userData.stats.wins} | Losses: ${userData.stats.losses} | Ties: ${userData.stats.ties}`;
+}
+updateStats();
+
+// Play game
+function play(playerChoice){
+  const choices = ["rock","paper","scissors"];
+  const aiChoice = choices[Math.floor(Math.random()*3)];
+
+  let result = "";
+  if(playerChoice === aiChoice){
+    result = `It's a tie! You both chose ${playerChoice}.`;
+    userData.stats.ties++;
+  } else if(
+    (playerChoice==="rock" && aiChoice==="scissors") ||
+    (playerChoice==="paper" && aiChoice==="rock") ||
+    (playerChoice==="scissors" && aiChoice==="paper")
+  ){
+    result = `You WIN! ${playerChoice} beats ${aiChoice}.`;
+    userData.stats.wins++;
+  } else {
+    result = `You LOSE! ${aiChoice} beats ${playerChoice}.`;
+    userData.stats.losses++;
+  }
+
+  // Save to localStorage
+  users[username] = userData;
+  localStorage.setItem("users", JSON.stringify(users));
+
+  // Update UI
+  document.getElementById("result").innerText = result;
+  updateStats();
+}
+
+function logout(){
+  localStorage.removeItem("username");
+  window.location.href = "index.html";
+}
 </script>
+</body>
+</html>
