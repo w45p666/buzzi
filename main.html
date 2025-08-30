@@ -8,6 +8,8 @@
 body { font-family: Arial, sans-serif; margin:0; display:flex; flex-direction:column; height:100vh; background:#2c3e50; color:white; }
 header { background:#3498db; padding:10px; display:flex; align-items:center; justify-content:space-between; }
 header img { width:40px; height:40px; border-radius:50%; margin-right:10px; }
+header button { margin-left:5px; padding:5px 10px; border:none; border-radius:5px; cursor:pointer; font-weight:bold; }
+header button:hover { opacity:0.8; }
 #chat { flex:1; padding:10px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; }
 .message { display:flex; align-items:center; gap:10px; background: rgba(255,255,255,0.1); padding:8px 12px; border-radius:10px; max-width:60%; word-wrap:break-word; }
 .message img { width:30px; height:30px; border-radius:50%; }
@@ -22,27 +24,34 @@ form button { padding:10px 15px; border:none; background:#f39c12; color:white; f
     <img id="pfp" src="" alt="PFP">
     <span id="usernameHeader"></span>
   </div>
-  <button onclick="logout()">Logout</button>
+  <div>
+    <button onclick="logout()">Logout</button>
+    <button onclick="enterDev()">Dev Only</button>
+  </div>
 </header>
+
 <div id="chat"></div>
+
 <form id="chatForm">
   <input id="messageInput" type="text" placeholder="Type a message..." required>
   <button type="submit">Send</button>
 </form>
 
 <script>
+// Check login
 const username = localStorage.getItem("username");
 if(!username) window.location.href="index.html";
 
+// Load user data
 const users = JSON.parse(localStorage.getItem("users"));
 const userData = users[username] || {};
 document.getElementById("usernameHeader").innerText = username;
 document.getElementById("pfp").src = userData.pfp || "https://via.placeholder.com/40";
 
+// Chat logic
 const chat = document.getElementById("chat");
 const chatForm = document.getElementById("chatForm");
 const messageInput = document.getElementById("messageInput");
-
 let messages = JSON.parse(localStorage.getItem("chatMessages")) || [];
 
 function renderMessages() {
@@ -66,9 +75,20 @@ chatForm.addEventListener("submit", e=>{
   messageInput.value="";
 });
 
+// Logout function
 function logout(){
   localStorage.removeItem("username");
   window.location.href="index.html";
+}
+
+// Dev Only button function
+function enterDev() {
+  const password = prompt("Enter Dev Password:");
+  if(password === "1567") {
+    window.location.href = "dev.html";
+  } else if(password !== null) {
+    alert("Incorrect password!");
+  }
 }
 
 renderMessages();
