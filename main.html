@@ -1,220 +1,79 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Social Media Demo</title>
-<style>
-    body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 0; }
-    .profile, .new-post, .feed { background: #fff; padding: 15px; margin: 10px; border-radius: 10px; }
-    .profile { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
-    .profile img { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; cursor: pointer; }
-    .profile-info { flex-grow: 1; }
-    .profile-info h2 { margin: 0; display: flex; align-items: center; gap: 10px; }
-    .profile-info input, .profile-info textarea { width: 100%; padding: 5px; margin: 5px 0; }
-    .counts { display: flex; gap: 15px; color: #777; font-size: 14px; }
-    .new-post textarea { width: 100%; padding: 10px; font-size: 14px; }
-    .new-post input[type="file"] { margin-top: 5px; }
-    .new-post button { margin-top: 10px; padding: 8px 15px; cursor: pointer; }
-    .feed .post { display: flex; flex-direction: column; gap: 5px; }
-    .post-header { display: flex; align-items: center; gap: 10px; }
-    .post-header img { width: 40px; height: 40px; border-radius: 50%; cursor: pointer; }
-    .post-content img { max-width: 100%; border-radius: 5px; margin-top: 5px; }
-    .actions { display: flex; gap: 10px; color: #555; font-size: 14px; cursor: pointer; }
-    .follow-btn { font-size: 12px; padding: 2px 6px; cursor: pointer; border-radius: 5px; background: #007bff; color: #fff; }
-    @media (max-width: 600px) {
-        .profile { flex-direction: column; align-items: flex-start; }
-    }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Chatbot</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .chatbox {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            width: 300px;
+            padding: 20px;
+        }
+        .messages {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+    </style>
 </head>
 <body>
 
-<!-- Profile -->
-<div class="profile">
-    <img id="profilePic" src="" alt="Profile Picture" onclick="viewProfile(currentUser)">
-    <div class="profile-info">
-        <h2 id="username">Username</h2>
-        <input type="text" id="editUsername" placeholder="Edit username">
-        <textarea id="editBio" placeholder="Edit bio"></textarea>
-        <input type="file" id="editPfp" accept="image/*">
-        <div class="counts">
-            <span id="followers">Followers: 0</span>
-            <span id="following">Following: 0</span>
-        </div>
-        <button onclick="updateProfile()">Update Profile</button>
-    </div>
+<div class="chatbox">
+    <div class="messages" id="messages"></div>
+    <input type="text" id="userInput" placeholder="Type your message..." />
 </div>
-
-<!-- New Post -->
-<div class="new-post">
-    <textarea id="postContent" placeholder="What's on your mind?"></textarea>
-    <input type="file" id="postImage" accept="image/*">
-    <button onclick="createPost()">Post</button>
-</div>
-
-<!-- Feed -->
-<div class="feed" id="feed"></div>
 
 <script>
-// ---------- Setup ----------
-const defaultPfp = "https://cdn-icons-png.flaticon.com/512/149/149071.png"; // fallback image
-let users = JSON.parse(localStorage.getItem('users')) || {};
-let posts = JSON.parse(localStorage.getItem('posts')) || [];
+    const messagesContainer = document.getElementById('messages');
+    const userInput = document.getElementById('userInput');
 
-// Current user info from login page
-let currentUser = localStorage.getItem('username') || 'Guest';
-if (!users[currentUser]) {
-    users[currentUser] = { username: currentUser, bio: "This is your bio", pfp: defaultPfp, followers: [], following: [] };
-    localStorage.setItem('users', JSON.stringify(users));
-}
-
-// ---------- Profile ----------
-const profilePicEl = document.getElementById('profilePic');
-const usernameEl = document.getElementById('username');
-const followersEl = document.getElementById('followers');
-const followingEl = document.getElementById('following');
-const editUsername = document.getElementById('editUsername');
-const editBio = document.getElementById('editBio');
-const editPfp = document.getElementById('editPfp');
-
-function loadProfile(user) {
-    const u = users[user];
-    profilePicEl.src = u.pfp;
-    usernameEl.textContent = u.username;
-    editUsername.value = u.username;
-    editBio.value = u.bio;
-    followersEl.textContent = "Followers: " + u.followers.length;
-    followingEl.textContent = "Following: " + u.following.length;
-}
-
-function updateProfile() {
-    const u = users[currentUser];
-    u.username = editUsername.value || u.username;
-    u.bio = editBio.value || u.bio;
-    if (editPfp.files[0]) {
-        const reader = new FileReader();
-        reader.onload = () => {
-            u.pfp = reader.result;
-            saveUsers();
-            loadProfile(currentUser);
-            renderFeed();
-        };
-        reader.readAsDataURL(editPfp.files[0]);
-    } else {
-        saveUsers();
-        loadProfile(currentUser);
-        renderFeed();
-    }
-}
-
-function saveUsers() {
-    localStorage.setItem('users', JSON.stringify(users));
-}
-
-// ---------- Create Post ----------
-function createPost() {
-    const content = document.getElementById('postContent').value.trim();
-    if (!content) return alert('Post cannot be empty');
-
-    const post = {
-        username: currentUser,
-        pfp: users[currentUser].pfp,
-        content,
-        image: null,
-        likes: 0,
-        shares: 0,
-        timestamp: new Date().toISOString()
-    };
-
-    const file = document.getElementById('postImage').files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = () => {
-            post.image = reader.result;
-            posts.unshift(post);
-            savePosts();
-            renderFeed();
-        };
-        reader.readAsDataURL(file);
-    } else {
-        posts.unshift(post);
-        savePosts();
-        renderFeed();
+    function appendMessage(text, sender) {
+        const messageElement = document.createElement('div');
+        messageElement.textContent = `${sender}: ${text}`;
+        messagesContainer.appendChild(messageElement);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight; // Auto scroll
     }
 
-    document.getElementById('postContent').value = '';
-    document.getElementById('postImage').value = '';
-}
+    function getResponse(input) {
+        // Simple AI response logic
+        const responses = {
+            'hi': 'Hello!',
+            'how are you?': 'I\'m just a computer program, but thanks for asking!',
+            'bye': 'Goodbye! Have a great day!'
+        };
+        return responses[input.toLowerCase()] || "Sorry, I don't understand that.";
+    }
 
-function savePosts() {
-    localStorage.setItem('posts', JSON.stringify(posts));
-}
+    userInput.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            const userText = userInput.value;
+            appendMessage(userText, 'You');
+            userInput.value = ''; // Clear input
 
-// ---------- Feed ----------
-function renderFeed() {
-    const feed = document.getElementById('feed');
-    feed.innerHTML = '';
-    posts.forEach((post, index) => {
-        const postDiv = document.createElement('div');
-        postDiv.className = 'post';
-        postDiv.innerHTML = `
-            <div class="post-header">
-                <img src="${post.pfp}" onclick="viewProfile('${post.username}')">
-                <span>${post.username}</span>
-                ${post.username !== currentUser ? `<button class="follow-btn" onclick="toggleFollow('${post.username}')">${users[currentUser].following.includes(post.username) ? 'Unfollow' : 'Follow'}</button>` : ''}
-            </div>
-            <div class="post-content">
-                <p>${post.content}</p>
-                ${post.image ? `<img src="${post.image}">` : ''}
-            </div>
-            <div class="actions">
-                <span onclick="likePost(${index})">❤️ ${post.likes}</span>
-                <span onclick="sharePost(${index})">🔁 ${post.shares}</span>
-            </div>
-        `;
-        feed.appendChild(postDiv);
+            const botResponse = getResponse(userText);
+            appendMessage(botResponse, 'Bot');
+        }
     });
-}
-
-// ---------- Interactions ----------
-function likePost(index) {
-    posts[index].likes++;
-    savePosts();
-    renderFeed();
-}
-
-function sharePost(index) {
-    posts[index].shares++;
-    savePosts();
-    renderFeed();
-}
-
-// ---------- Follow ----------
-function toggleFollow(user) {
-    const me = users[currentUser];
-    if (me.following.includes(user)) {
-        me.following = me.following.filter(u => u !== user);
-        users[user].followers = users[user].followers.filter(u => u !== currentUser);
-    } else {
-        me.following.push(user);
-        users[user].followers.push(currentUser);
-    }
-    saveUsers();
-    loadProfile(currentUser);
-    renderFeed();
-}
-
-// ---------- View Profile ----------
-function viewProfile(user) {
-    currentUser = user;
-    loadProfile(user);
-    // optionally scroll to top
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-// ---------- Init ----------
-loadProfile(currentUser);
-renderFeed();
 </script>
 
 </body>
