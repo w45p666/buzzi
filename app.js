@@ -1,135 +1,101 @@
-// --- Shared --- 
-const loadingScreen = document.getElementById("loadingScreen");
-const togglePass = document.getElementById("togglePass");
-const toggleConfirmPass = document.getElementById("toggleConfirmPass");
+// Elements
+const username = document.getElementById('username');
+const password = document.getElementById('password');
+const confirmPassword = document.getElementById('confirmPassword');
+const submitBtn = document.getElementById('submitBtn');
+const togglePass = document.getElementById('togglePass');
+const toggleConfirmPass = document.getElementById('toggleConfirmPass');
+const confirmPasswordGroup = document.getElementById('confirmPasswordGroup');
+const formTitle = document.getElementById('form-title');
+const message = document.getElementById('message');
+const loadingScreen = document.getElementById('loadingScreen');
 
-if(togglePass) setupToggle(togglePass, document.getElementById("password"));
-if(toggleConfirmPass) setupToggle(toggleConfirmPass, document.getElementById("confirmPassword"));
+let isLogin = true;
 
-function setupToggle(toggle, input) {
-  toggle.addEventListener("click", () => {
-    input.type = input.type === "password" ? "text" : "password";
-    toggle.innerText = input.type === "password" ? "Show" : "Hide";
-  });
+// Toggle login/signup form
+function toggleForm() {
+  isLogin = !isLogin;
+  if (isLogin) {
+    formTitle.textContent = 'Login';
+    submitBtn.textContent = 'Login';
+    confirmPasswordGroup.style.display = 'none';
+    document.querySelector('.toggle-link').textContent = 'Don’t have an account? Sign up';
+  } else {
+    formTitle.textContent = 'Signup';
+    submitBtn.textContent = 'Signup';
+    confirmPasswordGroup.style.display = 'block';
+    document.querySelector('.toggle-link').textContent = 'Already have an account? Login';
+  }
+  message.textContent = '';
+  username.value = '';
+  password.value = '';
+  confirmPassword.value = '';
 }
 
-// --- Login / Signup Page ---
-if(document.getElementById("submitBtn")) {
-  let isLogin = true;
-  const messageBox = document.getElementById("message");
+// Toggle password visibility
+togglePass.addEventListener('click', () => {
+  password.type = password.type === 'password' ? 'text' : 'password';
+  togglePass.textContent = password.type === 'password' ? 'Show' : 'Hide';
+});
 
-  document.querySelector(".toggle-link").addEventListener("click", () => {
-    isLogin = !isLogin;
-    document.getElementById("form-title").innerText = isLogin ? "Login" : "Sign Up";
-    document.getElementById("submitBtn").innerText = isLogin ? "Login" : "Sign Up";
-    document.getElementById("confirmPasswordGroup").style.display = isLogin ? "none" : "block";
-    messageBox.innerText = "";
-  });
+toggleConfirmPass.addEventListener('click', () => {
+  confirmPassword.type = confirmPassword.type === 'password' ? 'text' : 'password';
+  toggleConfirmPass.textContent = confirmPassword.type === 'password' ? 'Show' : 'Hide';
+});
 
-  document.getElementById("submitBtn").addEventListener("click", () => {
-    const username = document.getElementById("username").value.trim();
-    const password = document.getElementById("password").value.trim();
-    const confirm = document.getElementById("confirmPassword").value.trim();
-    if(!username || !password || (!isLogin && !confirm)) return messageBox.innerText = "Fill all fields";
+// Fake local storage backend for demonstration
+let users = JSON.parse(localStorage.getItem('users')) || {};
 
-    let users = JSON.parse(localStorage.getItem("users") || "{}");
+// Submit button handler
+submitBtn.addEventListener('click', () => {
+  const user = username.value.trim();
+  const pass = password.value.trim();
 
-    if(isLogin) {
-      if(!users[username]) return messageBox.innerText = "User not found";
-      if(users[username].password !== password) return messageBox.innerText = "Wrong password";
-
-      showLoading(() => {
-        localStorage.setItem("currentUser", username);
-        window.location.href = "main.html";
-      });
-    } else {
-      if(users[username]) return messageBox.innerText = "Username taken";
-      if(password !== confirm) return messageBox.innerText = "Passwords do not match";
-      users[username] = {password: password, posts: []};
-      localStorage.setItem("users", JSON.stringify(users));
-      messageBox.style.color = "green";
-      messageBox.innerText = "Account created! Please log in.";
-    }
-  });
-}
-
-function showLoading(callback) {
-  loadingScreen.style.display = "flex";
-  setTimeout(()=>{ loadingScreen.style.display = "none"; callback(); }, 800);
-}
-
-// --- Main Page Logic ---
-if(document.getElementById("feed")) {
-  const currentUser = localStorage.getItem("currentUser");
-  if(!currentUser) { window.location.href="index.html"; }
-
-  const users = JSON.parse(localStorage.getItem("users") || "{}");
-  const feedEl = document.getElementById("feed");
-  const postBtn = document.getElementById("postBtn");
-  const postText = document.getElementById("post-text");
-  const logoutBtn = document.getElementById("logoutBtn");
-  const darkModeBtn = document.getElementById("darkModeBtn");
-  const searchInput = document.getElementById("searchInput");
-  const notifications = document.getElementById("notifications");
-
-  let posts = JSON.parse(localStorage.getItem("posts") || "[]");
-
-  function savePosts() { localStorage.setItem("posts", JSON.stringify(posts)); }
-
-  function renderFeed(filter="") {
-    feedEl.innerHTML = "";
-    let filtered = posts.filter(p => p.text.toLowerCase().includes(filter.toLowerCase()));
-    filtered.sort((a,b)=> new Date(b.timestamp) - new Date(a.timestamp));
-    filtered.forEach(p => {
-      const post = document.createElement("div"); post.className="post";
-      post.innerHTML = `
-        <h3>${p.author} - ${new Date(p.timestamp).toLocaleString()}</h3>
-        <p>${p.text}</p>
-        <button class="like-btn">Like (${p.likes})</button>
-        ${p.author===currentUser?'<button class="edit-btn">Edit</button><button class="delete-btn">Delete</button>':''}
-        <button class="comment-btn">Comment (${p.comments.length})</button>
-        <div class="comments"></div>
-      `;
-      // Like
-      post.querySelector(".like-btn").addEventListener("click", ()=>{
-        p.likes++; savePosts(); renderFeed(searchInput.value);
-      });
-      // Edit
-      if(p.author===currentUser) post.querySelector(".edit-btn").addEventListener("click", ()=>{
-        const newText = prompt("Edit post:", p.text);
-        if(newText){ p.text=newText; savePosts(); renderFeed(searchInput.value);}
-      });
-      // Delete
-      if(p.author===currentUser) post.querySelector(".delete-btn").addEventListener("click", ()=>{
-        if(confirm("Delete post?")){ posts=posts.filter(x=>x!==p); savePosts(); renderFeed(searchInput.value);}
-      });
-      // Comment
-      post.querySelector(".comment-btn").addEventListener("click", ()=>{
-        const commentText = prompt("Enter comment:");
-        if(commentText){ p.comments.push({user:currentUser,text:commentText}); savePosts(); renderFeed(searchInput.value);}
-      });
-
-      const commentsDiv = post.querySelector(".comments");
-      p.comments.forEach(c => {
-        const com = document.createElement("div"); com.innerText=`${c.user}: ${c.text}`;
-        commentsDiv.appendChild(com);
-      });
-
-      feedEl.appendChild(post);
-    });
+  if (!user || !pass) {
+    message.textContent = 'Please fill in all fields';
+    return;
   }
 
-  postBtn.addEventListener("click", ()=>{
-    const text = postText.value.trim(); if(!text) return;
-    const newPost = {author:currentUser,text:text,likes:0,comments:[],timestamp:new Date()};
-    posts.push(newPost); savePosts(); postText.value=""; renderFeed();
-    notifications.innerText="New post added!";
-    setTimeout(()=>notifications.innerText="",2000);
-  });
+  if (isLogin) {
+    // Login flow
+    if (users[user] && users[user] === pass) {
+      showLoading();
+      setTimeout(() => {
+        message.style.color = 'green';
+        message.textContent = `Welcome back, ${user}!`;
+        hideLoading();
+      }, 1000);
+    } else {
+      message.style.color = 'red';
+      message.textContent = 'Invalid username or password';
+    }
+  } else {
+    // Signup flow
+    if (pass !== confirmPassword.value.trim()) {
+      message.textContent = 'Passwords do not match';
+      return;
+    }
+    if (users[user]) {
+      message.textContent = 'Username already exists';
+      return;
+    }
+    users[user] = pass;
+    localStorage.setItem('users', JSON.stringify(users));
+    showLoading();
+    setTimeout(() => {
+      message.style.color = 'green';
+      message.textContent = 'Account created! You can login now';
+      hideLoading();
+      toggleForm();
+    }, 1000);
+  }
+});
 
-  logoutBtn.addEventListener("click", ()=>{ localStorage.removeItem("currentUser"); window.location.href="index.html"; });
-  darkModeBtn.addEventListener("click", ()=>document.body.classList.toggle("dark"));
-  searchInput.addEventListener("input", ()=>renderFeed(searchInput.value));
+// Loading screen functions
+function showLoading() {
+  loadingScreen.style.display = 'flex';
+}
 
-  renderFeed();
+function hideLoading() {
+  loadingScreen.style.display = 'none';
 }
