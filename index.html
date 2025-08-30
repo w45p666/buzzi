@@ -3,107 +3,180 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chat Room</title>
+<title>Login / Signup</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
-body {
-  font-family: Arial, sans-serif;
-  margin: 0; padding: 0;
-  display: flex; flex-direction: column;
-  height: 100vh;
-  background: #2c3e50;
+body { 
+  font-family: Arial, sans-serif; 
+  background: linear-gradient(135deg, #2c3e50, #3498db);
+  display: flex; justify-content: center; align-items: center;
+  height: 100vh; margin: 0; 
   color: white;
 }
-header {
-  background: #3498db;
-  padding: 10px;
-  display: flex; align-items: center;
-  justify-content: space-between;
+.container {
+  background: rgba(0,0,0,0.7);
+  padding: 20px 30px;
+  border-radius: 15px;
+  width: 340px;
+  text-align: center;
 }
-header img { width: 40px; height: 40px; border-radius: 50%; margin-right: 10px; }
-#chat {
-  flex: 1; padding: 10px;
-  overflow-y: auto;
-  display: flex; flex-direction: column;
-  gap: 10px;
+h2 { margin-bottom: 20px; }
+.input-group { position: relative; width: 100%; margin-bottom: 10px; }
+input[type="text"], input[type="password"], input[type="file"] {
+  width: 100%; padding: 10px; margin: 5px 0;
+  border: none; border-radius: 5px;
 }
-.message {
-  background: rgba(255,255,255,0.1);
-  padding: 8px 12px;
-  border-radius: 10px;
-  max-width: 60%;
-  word-wrap: break-word;
-}
-form {
-  display: flex; padding: 10px;
-  background: #34495e;
-}
-form input {
-  flex: 1; padding: 10px; border-radius: 5px 0 0 5px; border: none;
-}
-form button {
-  padding: 10px 15px; border: none; background: #f39c12; color: white; font-weight: bold; border-radius: 0 5px 5px 0;
+button {
+  width: 100%; padding: 10px; margin-top: 10px;
+  border: none; border-radius: 5px;
+  background: #3498db; color: white; font-weight: bold;
   cursor: pointer;
 }
+button:hover { background: #2980b9; }
+.toggle-link {
+  margin-top: 15px; display: block; cursor: pointer;
+  color: #f39c12; text-decoration: underline;
+}
+.message { margin-top: 10px; font-size: 0.9em; }
+.toggle-password {
+  position: absolute; right: 10px; top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer; color: #aaa;
+}
+#loadingScreen {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: #111; color: white;
+  display: flex; justify-content: center; align-items: center;
+  font-size: 1.5em; z-index: 999; display: none;
+}
+#confirmPasswordGroup { display: none; }
 </style>
 </head>
 <body>
-<header>
-  <div style="display:flex; align-items:center;">
-    <img id="pfp" src="" alt="PFP">
-    <span id="usernameHeader"></span>
+<div class="container">
+  <h2 id="form-title">Login</h2>
+  <input id="username" type="text" placeholder="Username">
+  
+  <div class="input-group">
+    <input id="password" type="password" placeholder="Password">
+    <i id="togglePass" class="fa-solid fa-eye toggle-password"></i>
   </div>
-  <button onclick="logout()">Logout</button>
-</header>
-<div id="chat"></div>
-<form id="chatForm">
-  <input id="messageInput" type="text" placeholder="Type a message..." required>
-  <button type="submit">Send</button>
-</form>
+
+  <div class="input-group" id="confirmPasswordGroup">
+    <input id="confirmPassword" type="password" placeholder="Confirm Password">
+    <i id="toggleConfirmPass" class="fa-solid fa-eye toggle-password"></i>
+  </div>
+
+  <!-- Profile Picture Upload -->
+  <div class="input-group">
+    <input id="pfp" type="file" accept="image/*">
+  </div>
+  
+  <button onclick="handleSubmit()">Login</button>
+  <span class="toggle-link" onclick="toggleForm()">Don’t have an account? Sign up</span>
+  <div class="message" id="message"></div>
+</div>
+
+<div id="loadingScreen">Loading...</div>
 
 <script>
-const username = localStorage.getItem("username");
-if (!username) {
-  window.location.href = "index.html";
+let isLogin = true;
+
+function toggleForm() {
+  isLogin = !isLogin;
+  document.getElementById("form-title").innerText = isLogin ? "Login" : "Sign Up";
+  document.querySelector("button").innerText = isLogin ? "Login" : "Sign Up";
+  document.querySelector(".toggle-link").innerText = isLogin 
+    ? "Don’t have an account? Sign up" 
+    : "Already have an account? Log in";
+  document.getElementById("confirmPasswordGroup").style.display = isLogin ? "none" : "block";
+  document.getElementById("message").innerText = "";
 }
 
-const users = JSON.parse(localStorage.getItem("users"));
-const userData = users[username] || {};
-document.getElementById("usernameHeader").innerText = username;
-document.getElementById("pfp").src = userData.pfp || "https://via.placeholder.com/40";
+function handleSubmit() {
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value.trim();
+  const confirmPassword = document.getElementById("confirmPassword").value.trim();
+  const pfpInput = document.getElementById("pfp");
+  const messageBox = document.getElementById("message");
 
-const chat = document.getElementById("chat");
-const chatForm = document.getElementById("chatForm");
-const messageInput = document.getElementById("messageInput");
+  if (!username || !password || (!isLogin && !confirmPassword)) {
+    messageBox.innerText = "Please fill in all fields.";
+    messageBox.style.color = "red";
+    return;
+  }
 
-let messages = JSON.parse(localStorage.getItem("chatMessages")) || [];
+  let users = JSON.parse(localStorage.getItem("users")) || {};
 
-function renderMessages() {
-  chat.innerHTML = "";
-  messages.forEach(msg => {
-    const div = document.createElement("div");
-    div.className = "message";
-    div.innerHTML = `<strong>${msg.username}:</strong> ${msg.text}`;
-    chat.appendChild(div);
+  if (isLogin) {
+    if (!users[username]) {
+      messageBox.innerText = "Account with this username doesn’t exist.";
+      messageBox.style.color = "red";
+      return;
+    }
+    if (users[username].password !== password) {
+      messageBox.innerText = "Incorrect password.";
+      messageBox.style.color = "red";
+      return;
+    }
+    localStorage.setItem("username", username);
+    showLoading(() => { window.location.href = "main.html"; });
+  } else {
+    if (users[username]) {
+      messageBox.innerText = "Username already taken.";
+      messageBox.style.color = "red";
+      return;
+    }
+    if (password !== confirmPassword) {
+      messageBox.innerText = "Passwords do not match.";
+      messageBox.style.color = "red";
+      return;
+    }
+    if (password.length < 4) {
+      messageBox.innerText = "Password must be at least 4 characters.";
+      messageBox.style.color = "red";
+      return;
+    }
+
+    if (pfpInput.files[0]) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        users[username] = { password, pfp: e.target.result };
+        localStorage.setItem("users", JSON.stringify(users));
+        messageBox.innerText = "Account created! Please log in.";
+        messageBox.style.color = "lightgreen";
+        toggleForm();
+      }
+      reader.readAsDataURL(pfpInput.files[0]);
+    } else {
+      users[username] = { password, pfp: null };
+      localStorage.setItem("users", JSON.stringify(users));
+      messageBox.innerText = "Account created! Please log in.";
+      messageBox.style.color = "lightgreen";
+      toggleForm();
+    }
+  }
+}
+
+function showLoading(callback) {
+  const loadingScreen = document.getElementById("loadingScreen");
+  loadingScreen.style.display = "flex";
+  setTimeout(callback, 1000);
+}
+
+function setupToggle(toggleId, inputId) {
+  const toggle = document.getElementById(toggleId);
+  const input = document.getElementById(inputId);
+  toggle.addEventListener("click", () => {
+    const type = input.getAttribute("type") === "password" ? "text" : "password";
+    input.setAttribute("type", type);
+    toggle.classList.toggle("fa-eye");
+    toggle.classList.toggle("fa-eye-slash");
   });
-  chat.scrollTop = chat.scrollHeight;
 }
 
-chatForm.addEventListener("submit", e => {
-  e.preventDefault();
-  const text = messageInput.value.trim();
-  if (!text) return;
-  messages.push({ username, text });
-  localStorage.setItem("chatMessages", JSON.stringify(messages));
-  renderMessages();
-  messageInput.value = "";
-});
-
-function logout() {
-  localStorage.removeItem("username");
-  window.location.href = "index.html";
-}
-
-renderMessages();
+setupToggle("togglePass", "password");
+setupToggle("toggleConfirmPass", "confirmPassword");
 </script>
 </body>
 </html>
