@@ -3,82 +3,154 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Profile Page</title>
+<title>Social Media Demo</title>
 <style>
     body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 0; }
-    .profile { padding: 20px; background: #fff; display: flex; align-items: center; gap: 20px; }
-    .profile img { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; }
+    .profile, .new-post, .feed { background: #fff; padding: 15px; margin: 10px; border-radius: 10px; }
+    .profile { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+    .profile img { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; cursor: pointer; }
     .profile-info { flex-grow: 1; }
-    .profile-info h2 { margin: 0; }
-    .profile-info p { margin: 5px 0; color: #555; }
+    .profile-info h2 { margin: 0; display: flex; align-items: center; gap: 10px; }
+    .profile-info input, .profile-info textarea { width: 100%; padding: 5px; margin: 5px 0; }
     .counts { display: flex; gap: 15px; color: #777; font-size: 14px; }
-    .new-post { padding: 20px; background: #fff; margin-top: 10px; }
     .new-post textarea { width: 100%; padding: 10px; font-size: 14px; }
-    .feed { margin-top: 10px; }
-    .post { background: #fff; padding: 15px; margin: 10px 0; border-radius: 5px; }
-    .post h3 { margin: 0 0 5px 0; display: flex; align-items: center; gap: 10px; }
-    .post img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
-    .post p { margin: 5px 0; }
-    .post .actions { display: flex; gap: 10px; color: #555; font-size: 14px; cursor: pointer; }
+    .new-post input[type="file"] { margin-top: 5px; }
+    .new-post button { margin-top: 10px; padding: 8px 15px; cursor: pointer; }
+    .feed .post { display: flex; flex-direction: column; gap: 5px; }
+    .post-header { display: flex; align-items: center; gap: 10px; }
+    .post-header img { width: 40px; height: 40px; border-radius: 50%; cursor: pointer; }
+    .post-content img { max-width: 100%; border-radius: 5px; margin-top: 5px; }
+    .actions { display: flex; gap: 10px; color: #555; font-size: 14px; cursor: pointer; }
+    .follow-btn { font-size: 12px; padding: 2px 6px; cursor: pointer; border-radius: 5px; background: #007bff; color: #fff; }
+    @media (max-width: 600px) {
+        .profile { flex-direction: column; align-items: flex-start; }
+    }
 </style>
 </head>
 <body>
 
-<!-- Profile (Identity) -->
+<!-- Profile -->
 <div class="profile">
-    <img id="profilePic" src="" alt="Profile Picture">
+    <img id="profilePic" src="" alt="Profile Picture" onclick="viewProfile(currentUser)">
     <div class="profile-info">
-        <h2 id="username"></h2>
-        <p id="bio">This is a bio about the user.</p>
+        <h2 id="username">Username</h2>
+        <input type="text" id="editUsername" placeholder="Edit username">
+        <textarea id="editBio" placeholder="Edit bio"></textarea>
+        <input type="file" id="editPfp" accept="image/*">
         <div class="counts">
-            <span id="followers">Followers: 120</span>
-            <span id="following">Following: 75</span>
+            <span id="followers">Followers: 0</span>
+            <span id="following">Following: 0</span>
         </div>
+        <button onclick="updateProfile()">Update Profile</button>
     </div>
 </div>
 
-<!-- Content (Expression) -->
+<!-- New Post -->
 <div class="new-post">
     <textarea id="postContent" placeholder="What's on your mind?"></textarea>
+    <input type="file" id="postImage" accept="image/*">
     <button onclick="createPost()">Post</button>
 </div>
 
-<!-- Feed (Discovery) -->
-<div class="feed" id="feed">
-    <!-- Posts will appear here -->
-</div>
+<!-- Feed -->
+<div class="feed" id="feed"></div>
 
 <script>
-// Load user info from localStorage (from login page)
-const username = localStorage.getItem('username') || 'Guest';
-const profilePic = localStorage.getItem('profilePic') || 'https://via.placeholder.com/80';
-
-document.getElementById('username').textContent = username;
-document.getElementById('profilePic').src = profilePic;
-
-// Load saved posts or initialize
+// ---------- Setup ----------
+const defaultPfp = "https://cdn-icons-png.flaticon.com/512/149/149071.png"; // fallback image
+let users = JSON.parse(localStorage.getItem('users')) || {};
 let posts = JSON.parse(localStorage.getItem('posts')) || [];
 
-// Functions
+// Current user info from login page
+let currentUser = localStorage.getItem('username') || 'Guest';
+if (!users[currentUser]) {
+    users[currentUser] = { username: currentUser, bio: "This is your bio", pfp: defaultPfp, followers: [], following: [] };
+    localStorage.setItem('users', JSON.stringify(users));
+}
+
+// ---------- Profile ----------
+const profilePicEl = document.getElementById('profilePic');
+const usernameEl = document.getElementById('username');
+const followersEl = document.getElementById('followers');
+const followingEl = document.getElementById('following');
+const editUsername = document.getElementById('editUsername');
+const editBio = document.getElementById('editBio');
+const editPfp = document.getElementById('editPfp');
+
+function loadProfile(user) {
+    const u = users[user];
+    profilePicEl.src = u.pfp;
+    usernameEl.textContent = u.username;
+    editUsername.value = u.username;
+    editBio.value = u.bio;
+    followersEl.textContent = "Followers: " + u.followers.length;
+    followingEl.textContent = "Following: " + u.following.length;
+}
+
+function updateProfile() {
+    const u = users[currentUser];
+    u.username = editUsername.value || u.username;
+    u.bio = editBio.value || u.bio;
+    if (editPfp.files[0]) {
+        const reader = new FileReader();
+        reader.onload = () => {
+            u.pfp = reader.result;
+            saveUsers();
+            loadProfile(currentUser);
+            renderFeed();
+        };
+        reader.readAsDataURL(editPfp.files[0]);
+    } else {
+        saveUsers();
+        loadProfile(currentUser);
+        renderFeed();
+    }
+}
+
+function saveUsers() {
+    localStorage.setItem('users', JSON.stringify(users));
+}
+
+// ---------- Create Post ----------
 function createPost() {
     const content = document.getElementById('postContent').value.trim();
     if (!content) return alert('Post cannot be empty');
 
     const post = {
-        username,
-        profilePic,
+        username: currentUser,
+        pfp: users[currentUser].pfp,
         content,
+        image: null,
         likes: 0,
         shares: 0,
         timestamp: new Date().toISOString()
     };
 
-    posts.unshift(post); // newest first
-    localStorage.setItem('posts', JSON.stringify(posts));
+    const file = document.getElementById('postImage').files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = () => {
+            post.image = reader.result;
+            posts.unshift(post);
+            savePosts();
+            renderFeed();
+        };
+        reader.readAsDataURL(file);
+    } else {
+        posts.unshift(post);
+        savePosts();
+        renderFeed();
+    }
+
     document.getElementById('postContent').value = '';
-    renderFeed();
+    document.getElementById('postImage').value = '';
 }
 
+function savePosts() {
+    localStorage.setItem('posts', JSON.stringify(posts));
+}
+
+// ---------- Feed ----------
 function renderFeed() {
     const feed = document.getElementById('feed');
     feed.innerHTML = '';
@@ -86,8 +158,15 @@ function renderFeed() {
         const postDiv = document.createElement('div');
         postDiv.className = 'post';
         postDiv.innerHTML = `
-            <h3><img src="${post.profilePic}" alt="pfp">${post.username}</h3>
-            <p>${post.content}</p>
+            <div class="post-header">
+                <img src="${post.pfp}" onclick="viewProfile('${post.username}')">
+                <span>${post.username}</span>
+                ${post.username !== currentUser ? `<button class="follow-btn" onclick="toggleFollow('${post.username}')">${users[currentUser].following.includes(post.username) ? 'Unfollow' : 'Follow'}</button>` : ''}
+            </div>
+            <div class="post-content">
+                <p>${post.content}</p>
+                ${post.image ? `<img src="${post.image}">` : ''}
+            </div>
             <div class="actions">
                 <span onclick="likePost(${index})">❤️ ${post.likes}</span>
                 <span onclick="sharePost(${index})">🔁 ${post.shares}</span>
@@ -97,19 +176,44 @@ function renderFeed() {
     });
 }
 
+// ---------- Interactions ----------
 function likePost(index) {
     posts[index].likes++;
-    localStorage.setItem('posts', JSON.stringify(posts));
+    savePosts();
     renderFeed();
 }
 
 function sharePost(index) {
     posts[index].shares++;
-    localStorage.setItem('posts', JSON.stringify(posts));
+    savePosts();
     renderFeed();
 }
 
-// Initial render
+// ---------- Follow ----------
+function toggleFollow(user) {
+    const me = users[currentUser];
+    if (me.following.includes(user)) {
+        me.following = me.following.filter(u => u !== user);
+        users[user].followers = users[user].followers.filter(u => u !== currentUser);
+    } else {
+        me.following.push(user);
+        users[user].followers.push(currentUser);
+    }
+    saveUsers();
+    loadProfile(currentUser);
+    renderFeed();
+}
+
+// ---------- View Profile ----------
+function viewProfile(user) {
+    currentUser = user;
+    loadProfile(user);
+    // optionally scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ---------- Init ----------
+loadProfile(currentUser);
 renderFeed();
 </script>
 
