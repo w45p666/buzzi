@@ -8,23 +8,19 @@
 </head>
 <body>
 <div class="container">
-  <h1>Buzzi Feed</h1>
-  <div class="top-bar">
-    <button id="logoutBtn">Logout</button>
-    <button id="darkModeBtn">Dark Mode</button>
-    <input id="searchInput" type="text" placeholder="Search posts...">
-  </div>
+  <h2>Welcome, <span id="currentUser"></span></h2>
 
-  <div id="post-form">
-    <textarea id="post-text" placeholder="What's happening?"></textarea>
+  <div class="post-form">
+    <textarea id="postContent" placeholder="What's on your mind?"></textarea>
     <button id="postBtn">Post</button>
   </div>
 
-  <div id="notifications"></div>
-
+  <h3>Feed</h3>
   <div id="feed"></div>
+
+  <button id="logoutBtn" style="margin-top: 20px; background:#ff4c4c;">Logout</button>
 </div>
 
-<script src="app.js"></script>
+<script src="main.js"></script>
 </body>
 </html>
