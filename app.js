@@ -1,89 +1,135 @@
-// Firebase config
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
-};
+// --- Shared --- 
+const loadingScreen = document.getElementById("loadingScreen");
+const togglePass = document.getElementById("togglePass");
+const toggleConfirmPass = document.getElementById("toggleConfirmPass");
 
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
+if(togglePass) setupToggle(togglePass, document.getElementById("password"));
+if(toggleConfirmPass) setupToggle(toggleConfirmPass, document.getElementById("confirmPassword"));
 
-// --------- Login / Signup ---------
-const signupBtn = document?.getElementById("signup-btn");
-const loginBtn = document?.getElementById("login-btn");
+function setupToggle(toggle, input) {
+  toggle.addEventListener("click", () => {
+    input.type = input.type === "password" ? "text" : "password";
+    toggle.innerText = input.type === "password" ? "Show" : "Hide";
+  });
+}
 
-signupBtn?.addEventListener("click", () => {
-  const name = document.getElementById("signup-name").value;
-  const email = document.getElementById("signup-email").value;
-  const password = document.getElementById("signup-password").value;
+// --- Login / Signup Page ---
+if(document.getElementById("submitBtn")) {
+  let isLogin = true;
+  const messageBox = document.getElementById("message");
 
-  auth.createUserWithEmailAndPassword(email, password)
-    .then((cred) => {
-      return db.collection("users").doc(cred.user.uid).set({ name: name, email: email });
-    })
-    .then(() => { window.location.href = "main.html"; })
-    .catch(err => alert(err.message));
-});
-
-loginBtn?.addEventListener("click", () => {
-  const email = document.getElementById("login-email").value;
-  const password = document.getElementById("login-password").value;
-
-  auth.signInWithEmailAndPassword(email, password)
-    .then(() => { window.location.href = "main.html"; })
-    .catch(err => alert(err.message));
-});
-
-// --------- Main Feed ---------
-const logoutBtn = document?.getElementById("logout-btn");
-logoutBtn?.addEventListener("click", () => auth.signOut().then(() => window.location.href = "index.html"));
-
-// Check if user is logged in
-auth.onAuthStateChanged(user => {
-  if (!user && window.location.pathname.includes("main.html")) {
-    window.location.href = "index.html";
-  }
-});
-
-// Posting
-const postBtn = document?.getElementById("post-btn");
-postBtn?.addEventListener("click", () => {
-  const text = document.getElementById("post-text").value;
-  const user = auth.currentUser;
-
-  if (!text || !user) return;
-
-  db.collection("posts").add({
-    uid: user.uid,
-    text: text,
-    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-    likes: 0
+  document.querySelector(".toggle-link").addEventListener("click", () => {
+    isLogin = !isLogin;
+    document.getElementById("form-title").innerText = isLogin ? "Login" : "Sign Up";
+    document.getElementById("submitBtn").innerText = isLogin ? "Login" : "Sign Up";
+    document.getElementById("confirmPasswordGroup").style.display = isLogin ? "none" : "block";
+    messageBox.innerText = "";
   });
 
-  document.getElementById("post-text").value = "";
-});
+  document.getElementById("submitBtn").addEventListener("click", () => {
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value.trim();
+    const confirm = document.getElementById("confirmPassword").value.trim();
+    if(!username || !password || (!isLogin && !confirm)) return messageBox.innerText = "Fill all fields";
 
-// Display feed
-const feed = document?.getElementById("feed");
-if (feed) {
-  db.collection("posts").orderBy("timestamp", "desc").onSnapshot(snapshot => {
-    feed.innerHTML = "";
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      const post = document.createElement("div");
-      post.className = "post";
-      post.innerHTML = `<h3>${data.uid}</h3><p>${data.text}</p>
-      <button class="like-btn">Like (${data.likes})</button>`;
-      feed.appendChild(post);
+    let users = JSON.parse(localStorage.getItem("users") || "{}");
 
-      // Like button
-      post.querySelector(".like-btn").addEventListener("click", () => {
-        db.collection("posts").doc(doc.id).update({ likes: data.likes + 1 });
+    if(isLogin) {
+      if(!users[username]) return messageBox.innerText = "User not found";
+      if(users[username].password !== password) return messageBox.innerText = "Wrong password";
+
+      showLoading(() => {
+        localStorage.setItem("currentUser", username);
+        window.location.href = "main.html";
       });
-    });
+    } else {
+      if(users[username]) return messageBox.innerText = "Username taken";
+      if(password !== confirm) return messageBox.innerText = "Passwords do not match";
+      users[username] = {password: password, posts: []};
+      localStorage.setItem("users", JSON.stringify(users));
+      messageBox.style.color = "green";
+      messageBox.innerText = "Account created! Please log in.";
+    }
   });
+}
+
+function showLoading(callback) {
+  loadingScreen.style.display = "flex";
+  setTimeout(()=>{ loadingScreen.style.display = "none"; callback(); }, 800);
+}
+
+// --- Main Page Logic ---
+if(document.getElementById("feed")) {
+  const currentUser = localStorage.getItem("currentUser");
+  if(!currentUser) { window.location.href="index.html"; }
+
+  const users = JSON.parse(localStorage.getItem("users") || "{}");
+  const feedEl = document.getElementById("feed");
+  const postBtn = document.getElementById("postBtn");
+  const postText = document.getElementById("post-text");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const darkModeBtn = document.getElementById("darkModeBtn");
+  const searchInput = document.getElementById("searchInput");
+  const notifications = document.getElementById("notifications");
+
+  let posts = JSON.parse(localStorage.getItem("posts") || "[]");
+
+  function savePosts() { localStorage.setItem("posts", JSON.stringify(posts)); }
+
+  function renderFeed(filter="") {
+    feedEl.innerHTML = "";
+    let filtered = posts.filter(p => p.text.toLowerCase().includes(filter.toLowerCase()));
+    filtered.sort((a,b)=> new Date(b.timestamp) - new Date(a.timestamp));
+    filtered.forEach(p => {
+      const post = document.createElement("div"); post.className="post";
+      post.innerHTML = `
+        <h3>${p.author} - ${new Date(p.timestamp).toLocaleString()}</h3>
+        <p>${p.text}</p>
+        <button class="like-btn">Like (${p.likes})</button>
+        ${p.author===currentUser?'<button class="edit-btn">Edit</button><button class="delete-btn">Delete</button>':''}
+        <button class="comment-btn">Comment (${p.comments.length})</button>
+        <div class="comments"></div>
+      `;
+      // Like
+      post.querySelector(".like-btn").addEventListener("click", ()=>{
+        p.likes++; savePosts(); renderFeed(searchInput.value);
+      });
+      // Edit
+      if(p.author===currentUser) post.querySelector(".edit-btn").addEventListener("click", ()=>{
+        const newText = prompt("Edit post:", p.text);
+        if(newText){ p.text=newText; savePosts(); renderFeed(searchInput.value);}
+      });
+      // Delete
+      if(p.author===currentUser) post.querySelector(".delete-btn").addEventListener("click", ()=>{
+        if(confirm("Delete post?")){ posts=posts.filter(x=>x!==p); savePosts(); renderFeed(searchInput.value);}
+      });
+      // Comment
+      post.querySelector(".comment-btn").addEventListener("click", ()=>{
+        const commentText = prompt("Enter comment:");
+        if(commentText){ p.comments.push({user:currentUser,text:commentText}); savePosts(); renderFeed(searchInput.value);}
+      });
+
+      const commentsDiv = post.querySelector(".comments");
+      p.comments.forEach(c => {
+        const com = document.createElement("div"); com.innerText=`${c.user}: ${c.text}`;
+        commentsDiv.appendChild(com);
+      });
+
+      feedEl.appendChild(post);
+    });
+  }
+
+  postBtn.addEventListener("click", ()=>{
+    const text = postText.value.trim(); if(!text) return;
+    const newPost = {author:currentUser,text:text,likes:0,comments:[],timestamp:new Date()};
+    posts.push(newPost); savePosts(); postText.value=""; renderFeed();
+    notifications.innerText="New post added!";
+    setTimeout(()=>notifications.innerText="",2000);
+  });
+
+  logoutBtn.addEventListener("click", ()=>{ localStorage.removeItem("currentUser"); window.location.href="index.html"; });
+  darkModeBtn.addEventListener("click", ()=>document.body.classList.toggle("dark"));
+  searchInput.addEventListener("input", ()=>renderFeed(searchInput.value));
+
+  renderFeed();
 }
