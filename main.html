@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chat Room</title>
+<title>AI Chatbot</title>
 <style>
 body{font-family:Arial,sans-serif;margin:0;display:flex;flex-direction:column;height:100vh;background:#2c3e50;color:white;}
 header{background:#3498db;padding:10px;display:flex;align-items:center;justify-content:space-between;}
@@ -11,7 +11,9 @@ header img{width:40px;height:40px;border-radius:50%;margin-right:10px;}
 header button{margin-left:5px;padding:5px 10px;border:none;border-radius:5px;cursor:pointer;font-weight:bold;}
 header button:hover{opacity:0.8;}
 #chat{flex:1;padding:10px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;}
-.message{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.1);padding:8px 12px;border-radius:10px;max-width:60%;word-wrap:break-word;}
+.message{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;max-width:80%;word-wrap:break-word;}
+.message.user{background:rgba(46, 204, 113,0.3);align-self:flex-end;}
+.message.ai{background:rgba(52, 152, 219,0.3);align-self:flex-start;}
 .message img{width:30px;height:30px;border-radius:50%;}
 form{display:flex;padding:10px;background:#34495e;}
 form input{flex:1;padding:10px;border-radius:5px 0 0 5px;border:none;}
@@ -20,20 +22,20 @@ form button{padding:10px 15px;border:none;background:#f39c12;color:white;font-we
 </head>
 <body>
 <header>
-  <div style="display:flex; align-items:center;">
+  <div style="display:flex;align-items:center;">
     <img id="pfp" src="" alt="PFP">
     <span id="usernameHeader"></span>
   </div>
   <div>
     <button onclick="logout()">Logout</button>
-    <button onclick="enterDev()">Dev Only</button>
     <button onclick="editProfile()">Edit Profile</button>
   </div>
 </header>
 
 <div id="chat"></div>
+
 <form id="chatForm">
-  <input id="messageInput" type="text" placeholder="Type a message..." required>
+  <input id="messageInput" type="text" placeholder="Type your message..." required>
   <button type="submit">Send</button>
 </form>
 
@@ -45,59 +47,65 @@ if(!username) window.location.href="index.html";
 let users = JSON.parse(localStorage.getItem("users"));
 let userData = users[username] || {};
 
-document.getElementById("usernameHeader").innerText=username;
-document.getElementById("pfp").src=userData.pfp||"https://via.placeholder.com/40";
+document.getElementById("usernameHeader").innerText = username;
+document.getElementById("pfp").src = userData.pfp || "https://via.placeholder.com/40";
 
-let messages = JSON.parse(localStorage.getItem("chatMessages"))||[];
-let banned = JSON.parse(localStorage.getItem("bannedUsers"))||[];
+let messages = JSON.parse(localStorage.getItem("chatMessages")) || [];
 
+// Render chat
 function renderMessages(){
   const chat=document.getElementById("chat");
   chat.innerHTML="";
   messages.forEach(msg=>{
     const div=document.createElement("div");
-    div.className="message";
-    div.innerHTML=`<img src="${msg.pfp||'https://via.placeholder.com/30'}"><strong>${msg.username}:</strong> ${msg.text}`;
+    div.className="message "+(msg.sender==="user"?"user":"ai");
+    div.innerHTML=`<img src="${msg.pfp||'https://via.placeholder.com/30'}"><strong>${msg.sender==="user"?msg.username:"AI"}:</strong> ${msg.text}`;
     chat.appendChild(div);
   });
   chat.scrollTop=chat.scrollHeight;
 }
 
+// AI response (simple rule-based)
+function getAIResponse(text){
+  text=text.toLowerCase();
+  if(text.includes("hello") || text.includes("hi")) return "Hello! How can I help you today?";
+  if(text.includes("how are you")) return "I'm just a bot, but I'm doing great!";
+  if(text.includes("your name")) return "I'm your friendly AI chatbot.";
+  return "Sorry, I don't understand. Can you rephrase?";
+}
+
+// Send message
 document.getElementById("chatForm").addEventListener("submit",e=>{
   e.preventDefault();
-  if(banned.includes(username)){ alert("You are banned!"); return; }
   const text=document.getElementById("messageInput").value.trim();
   if(!text) return;
-  messages.push({username,text,pfp:userData.pfp});
+
+  // Add user message
+  messages.push({sender:"user",username,text,pfp:userData.pfp});
   localStorage.setItem("chatMessages",JSON.stringify(messages));
   renderMessages();
   document.getElementById("messageInput").value="";
+
+  // AI reply
+  setTimeout(()=>{
+    const aiText=getAIResponse(text);
+    messages.push({sender:"ai",username:"AI",text,pfp:"https://via.placeholder.com/30"});
+    messages[messages.length-1].text = aiText;
+    localStorage.setItem("chatMessages",JSON.stringify(messages));
+    renderMessages();
+  },500);
 });
-
-function logout(){
-  localStorage.removeItem("username");
-  window.location.href="index.html";
-}
-
-function enterDev(){
-  const password=prompt("Enter Dev Password:");
-  if(password==="1567") window.location.href="dev.html";
-  else if(password!==null) alert("Incorrect password!");
-}
 
 // Edit profile
 function editProfile(){
   let newUsername=prompt("Enter new username:",username);
   if(!newUsername) return;
-  if(newUsername!==username && users[newUsername]) { alert("Username already taken!"); return; }
+  if(newUsername!==username && users[newUsername]) { alert("Username taken!"); return; }
 
   let newPassword=prompt("Enter new password (leave blank to keep current):","");
-  if(newPassword && newPassword.length<4){ alert("Password must be at least 4 characters."); return; }
-
   const fileInput=document.createElement("input");
-  fileInput.type="file";
-  fileInput.accept="image/*";
-  fileInput.onchange=()=>{ 
+  fileInput.type="file"; fileInput.accept="image/*";
+  fileInput.onchange=()=>{
     const file=fileInput.files[0];
     if(file){
       const reader=new FileReader();
@@ -109,27 +117,31 @@ function editProfile(){
 
   function saveProfile(newPfp){
     if(newUsername!==username) delete users[username];
-    users[newUsername]={password:newPassword||userData.password, pfp:newPfp};
+    users[newUsername]={password:newPassword||userData.password,pfp:newPfp};
     localStorage.setItem("users",JSON.stringify(users));
     localStorage.setItem("username",newUsername);
 
-    // Update messages
+    // Update past messages username & PFP
     messages.forEach(msg=>{
-      if(msg.username===username){ msg.username=newUsername; msg.pfp=newPfp; }
+      if(msg.sender==="user" && msg.username===username){
+        msg.username=newUsername;
+        msg.pfp=newPfp;
+      }
     });
     localStorage.setItem("chatMessages",JSON.stringify(messages));
-
-    // Update banned users
-    const index=banned.indexOf(username);
-    if(index!==-1){ banned[index]=newUsername; localStorage.setItem("bannedUsers",JSON.stringify(banned)); }
 
     username=newUsername;
     userData=users[username];
     document.getElementById("usernameHeader").innerText=username;
     document.getElementById("pfp").src=newPfp||"https://via.placeholder.com/40";
     renderMessages();
-    alert("Profile updated! Messages and bans have been updated.");
+    alert("Profile updated!");
   }
+}
+
+function logout(){
+  localStorage.removeItem("username");
+  window.location.href="index.html";
 }
 
 renderMessages();
