@@ -5,17 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Chat Room</title>
 <style>
-body { font-family: Arial, sans-serif; margin:0; display:flex; flex-direction:column; height:100vh; background:#2c3e50; color:white; }
-header { background:#3498db; padding:10px; display:flex; align-items:center; justify-content:space-between; }
-header img { width:40px; height:40px; border-radius:50%; margin-right:10px; }
-header button { margin-left:5px; padding:5px 10px; border:none; border-radius:5px; cursor:pointer; font-weight:bold; }
-header button:hover { opacity:0.8; }
-#chat { flex:1; padding:10px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; }
-.message { display:flex; align-items:center; gap:10px; background: rgba(255,255,255,0.1); padding:8px 12px; border-radius:10px; max-width:60%; word-wrap:break-word; }
-.message img { width:30px; height:30px; border-radius:50%; }
-form { display:flex; padding:10px; background:#34495e; }
-form input { flex:1; padding:10px; border-radius:5px 0 0 5px; border:none; }
-form button { padding:10px 15px; border:none; background:#f39c12; color:white; font-weight:bold; border-radius:0 5px 5px 0; cursor:pointer; }
+body{font-family:Arial,sans-serif;margin:0;display:flex;flex-direction:column;height:100vh;background:#2c3e50;color:white;}
+header{background:#3498db;padding:10px;display:flex;align-items:center;justify-content:space-between;}
+header img{width:40px;height:40px;border-radius:50%;margin-right:10px;}
+header button{margin-left:5px;padding:5px 10px;border:none;border-radius:5px;cursor:pointer;font-weight:bold;}
+header button:hover{opacity:0.8;}
+#chat{flex:1;padding:10px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;}
+.message{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.1);padding:8px 12px;border-radius:10px;max-width:60%;word-wrap:break-word;}
+.message img{width:30px;height:30px;border-radius:50%;}
+form{display:flex;padding:10px;background:#34495e;}
+form input{flex:1;padding:10px;border-radius:5px 0 0 5px;border:none;}
+form button{padding:10px 15px;border:none;background:#f39c12;color:white;font-weight:bold;border-radius:0 5px 5px 0;cursor:pointer;}
 </style>
 </head>
 <body>
@@ -27,67 +27,108 @@ form button { padding:10px 15px; border:none; background:#f39c12; color:white; f
   <div>
     <button onclick="logout()">Logout</button>
     <button onclick="enterDev()">Dev Only</button>
+    <button onclick="editProfile()">Edit Profile</button>
   </div>
 </header>
 
 <div id="chat"></div>
-
 <form id="chatForm">
   <input id="messageInput" type="text" placeholder="Type a message..." required>
   <button type="submit">Send</button>
 </form>
 
 <script>
-// Check login
-const username = localStorage.getItem("username");
+// Login check
+let username = localStorage.getItem("username");
 if(!username) window.location.href="index.html";
 
-// Load user data
-const users = JSON.parse(localStorage.getItem("users"));
-const userData = users[username] || {};
-document.getElementById("usernameHeader").innerText = username;
-document.getElementById("pfp").src = userData.pfp || "https://via.placeholder.com/40";
+let users = JSON.parse(localStorage.getItem("users"));
+let userData = users[username] || {};
 
-// Chat logic
-const chat = document.getElementById("chat");
-const chatForm = document.getElementById("chatForm");
-const messageInput = document.getElementById("messageInput");
-let messages = JSON.parse(localStorage.getItem("chatMessages")) || [];
+document.getElementById("usernameHeader").innerText=username;
+document.getElementById("pfp").src=userData.pfp||"https://via.placeholder.com/40";
 
-function renderMessages() {
-  chat.innerHTML = "";
-  messages.forEach(msg => {
-    const div = document.createElement("div");
-    div.className = "message";
-    div.innerHTML = `<img src="${msg.pfp || 'https://via.placeholder.com/30'}"><strong>${msg.username}:</strong> ${msg.text}`;
+let messages = JSON.parse(localStorage.getItem("chatMessages"))||[];
+let banned = JSON.parse(localStorage.getItem("bannedUsers"))||[];
+
+function renderMessages(){
+  const chat=document.getElementById("chat");
+  chat.innerHTML="";
+  messages.forEach(msg=>{
+    const div=document.createElement("div");
+    div.className="message";
+    div.innerHTML=`<img src="${msg.pfp||'https://via.placeholder.com/30'}"><strong>${msg.username}:</strong> ${msg.text}`;
     chat.appendChild(div);
   });
-  chat.scrollTop = chat.scrollHeight;
+  chat.scrollTop=chat.scrollHeight;
 }
 
-chatForm.addEventListener("submit", e=>{
+document.getElementById("chatForm").addEventListener("submit",e=>{
   e.preventDefault();
-  const text = messageInput.value.trim();
+  if(banned.includes(username)){ alert("You are banned!"); return; }
+  const text=document.getElementById("messageInput").value.trim();
   if(!text) return;
-  messages.push({ username, text, pfp: userData.pfp });
-  localStorage.setItem("chatMessages", JSON.stringify(messages));
+  messages.push({username,text,pfp:userData.pfp});
+  localStorage.setItem("chatMessages",JSON.stringify(messages));
   renderMessages();
-  messageInput.value="";
+  document.getElementById("messageInput").value="";
 });
 
-// Logout function
 function logout(){
   localStorage.removeItem("username");
   window.location.href="index.html";
 }
 
-// Dev Only button function
-function enterDev() {
-  const password = prompt("Enter Dev Password:");
-  if(password === "1567") {
-    window.location.href = "dev.html";
-  } else if(password !== null) {
-    alert("Incorrect password!");
+function enterDev(){
+  const password=prompt("Enter Dev Password:");
+  if(password==="1567") window.location.href="dev.html";
+  else if(password!==null) alert("Incorrect password!");
+}
+
+// Edit profile
+function editProfile(){
+  let newUsername=prompt("Enter new username:",username);
+  if(!newUsername) return;
+  if(newUsername!==username && users[newUsername]) { alert("Username already taken!"); return; }
+
+  let newPassword=prompt("Enter new password (leave blank to keep current):","");
+  if(newPassword && newPassword.length<4){ alert("Password must be at least 4 characters."); return; }
+
+  const fileInput=document.createElement("input");
+  fileInput.type="file";
+  fileInput.accept="image/*";
+  fileInput.onchange=()=>{ 
+    const file=fileInput.files[0];
+    if(file){
+      const reader=new FileReader();
+      reader.onload=function(e){ saveProfile(e.target.result); }
+      reader.readAsDataURL(file);
+    } else saveProfile(userData.pfp);
+  };
+  fileInput.click();
+
+  function saveProfile(newPfp){
+    if(newUsername!==username) delete users[username];
+    users[newUsername]={password:newPassword||userData.password, pfp:newPfp};
+    localStorage.setItem("users",JSON.stringify(users));
+    localStorage.setItem("username",newUsername);
+
+    // Update messages
+    messages.forEach(msg=>{
+      if(msg.username===username){ msg.username=newUsername; msg.pfp=newPfp; }
+    });
+    localStorage.setItem("chatMessages",JSON.stringify(messages));
+
+    // Update banned users
+    const index=banned.indexOf(username);
+    if(index!==-1){ banned[index]=newUsername; localStorage.setItem("bannedUsers",JSON.stringify(banned)); }
+
+    username=newUsername;
+    userData=users[username];
+    document.getElementById("usernameHeader").innerText=username;
+    document.getElementById("pfp").src=newPfp||"https://via.placeholder.com/40";
+    renderMessages();
+    alert("Profile updated! Messages and bans have been updated.");
   }
 }
 
