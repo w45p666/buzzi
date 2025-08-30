@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Social Media Demo</title>
+<title>Profile Page</title>
 <style>
     body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 0; }
     .profile { padding: 20px; background: #fff; display: flex; align-items: center; gap: 20px; }
@@ -16,7 +16,8 @@
     .new-post textarea { width: 100%; padding: 10px; font-size: 14px; }
     .feed { margin-top: 10px; }
     .post { background: #fff; padding: 15px; margin: 10px 0; border-radius: 5px; }
-    .post h3 { margin: 0 0 5px 0; }
+    .post h3 { margin: 0 0 5px 0; display: flex; align-items: center; gap: 10px; }
+    .post img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
     .post p { margin: 5px 0; }
     .post .actions { display: flex; gap: 10px; color: #555; font-size: 14px; cursor: pointer; }
 </style>
@@ -25,9 +26,9 @@
 
 <!-- Profile (Identity) -->
 <div class="profile">
-    <img id="profilePic" src="https://via.placeholder.com/80" alt="Profile Picture">
+    <img id="profilePic" src="" alt="Profile Picture">
     <div class="profile-info">
-        <h2 id="username">Username</h2>
+        <h2 id="username"></h2>
         <p id="bio">This is a bio about the user.</p>
         <div class="counts">
             <span id="followers">Followers: 120</span>
@@ -48,23 +49,32 @@
 </div>
 
 <script>
-// Simple in-memory storage for posts
-let posts = [];
+// Load user info from localStorage (from login page)
+const username = localStorage.getItem('username') || 'Guest';
+const profilePic = localStorage.getItem('profilePic') || 'https://via.placeholder.com/80';
 
-// Interaction & Posting
+document.getElementById('username').textContent = username;
+document.getElementById('profilePic').src = profilePic;
+
+// Load saved posts or initialize
+let posts = JSON.parse(localStorage.getItem('posts')) || [];
+
+// Functions
 function createPost() {
     const content = document.getElementById('postContent').value.trim();
     if (!content) return alert('Post cannot be empty');
 
     const post = {
-        username: document.getElementById('username').textContent,
+        username,
+        profilePic,
         content,
         likes: 0,
-        comments: [],
-        shares: 0
+        shares: 0,
+        timestamp: new Date().toISOString()
     };
 
-    posts.unshift(post);
+    posts.unshift(post); // newest first
+    localStorage.setItem('posts', JSON.stringify(posts));
     document.getElementById('postContent').value = '';
     renderFeed();
 }
@@ -76,7 +86,7 @@ function renderFeed() {
         const postDiv = document.createElement('div');
         postDiv.className = 'post';
         postDiv.innerHTML = `
-            <h3>${post.username}</h3>
+            <h3><img src="${post.profilePic}" alt="pfp">${post.username}</h3>
             <p>${post.content}</p>
             <div class="actions">
                 <span onclick="likePost(${index})">❤️ ${post.likes}</span>
@@ -89,15 +99,17 @@ function renderFeed() {
 
 function likePost(index) {
     posts[index].likes++;
+    localStorage.setItem('posts', JSON.stringify(posts));
     renderFeed();
 }
 
 function sharePost(index) {
     posts[index].shares++;
+    localStorage.setItem('posts', JSON.stringify(posts));
     renderFeed();
 }
 
-// Initialize feed
+// Initial render
 renderFeed();
 </script>
 
