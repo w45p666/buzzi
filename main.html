@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Buzzi - Feed</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="app.js" defer></script>
+</head>
+<body>
+<div class="container">
+  <h1>Buzzi Feed</h1>
+  <button id="logout-btn">Logout</button>
+
+  <div id="post-form">
+    <textarea id="post-text" placeholder="What's happening?"></textarea>
+    <button id="post-btn">Post</button>
+  </div>
+
+  <div id="feed"></div>
+</div>
+</body>
+</html>
